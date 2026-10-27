@@ -22,25 +22,25 @@ function cleanProject(input, partial = false) {
   return { values };
 }
 
-export async function list(_req, res) {
-  res.json({ projects: await listProjects() });
+export async function list(req, res) {
+  res.json({ projects: await listProjects(req.user.id) });
 }
 
 export async function create(req, res) {
   const parsed = cleanProject(req.body || {});
   if (parsed.error) return res.status(400).json({ message: parsed.error });
-  res.status(201).json({ project: await createProject(parsed.values) });
+  res.status(201).json({ project: await createProject(req.user.id, parsed.values) });
 }
 
 export async function update(req, res) {
   const parsed = cleanProject(req.body || {}, true);
   if (parsed.error) return res.status(400).json({ message: parsed.error });
-  const project = await updateProject(req.params.id, parsed.values);
+  const project = await updateProject(req.user.id, req.params.id, parsed.values);
   if (!project) return res.status(404).json({ message: 'Project not found.' });
   res.json({ project });
 }
 
 export async function remove(req, res) {
-  if (!await removeProject(req.params.id)) return res.status(404).json({ message: 'Project not found.' });
+  if (!await removeProject(req.user.id, req.params.id)) return res.status(404).json({ message: 'Project not found.' });
   res.status(204).end();
 }

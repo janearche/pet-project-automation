@@ -49,6 +49,12 @@ export interface ProjectInput {
   color: ProjectColor;
 }
 
+export interface RegistrationInput {
+  name: string;
+  email: string;
+  password: string;
+}
+
 export interface DashboardSummary {
   open: number;
   completed: number;

@@ -19,6 +19,7 @@ app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
 // Controller 1: authentication and session lifecycle.
 app.post('/api/auth/login', authController.login);
+app.post('/api/auth/register', authController.register);
 app.post('/api/auth/logout', authController.logout);
 app.get('/api/auth/me', authController.me);
 

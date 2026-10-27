@@ -6,9 +6,10 @@ import { api } from './api';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import ProjectsPage from './pages/ProjectsPage';
+import RegisterPage from './pages/RegisterPage';
 import SettingsPage from './pages/SettingsPage';
 import TasksPage from './pages/TasksPage';
-import type { DashboardSummary, Notice, Preferences, Project, ProjectInput, Task, TaskInput, User } from './types';
+import type { DashboardSummary, Notice, Preferences, Project, ProjectInput, RegistrationInput, Task, TaskInput, User } from './types';
 
 const drawerWidth = 256;
 const theme = createTheme({
@@ -67,14 +68,20 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!loading && user && pageFor(route).page === '/login') navigate('/dashboard');
-    else if (!loading && !user && pageFor(route).page !== '/login') navigate('/login');
+    if (!loading && user && ['/login', '/register'].includes(pageFor(route).page)) navigate('/dashboard');
+    else if (!loading && !user && !['/login', '/register'].includes(pageFor(route).page)) navigate('/login');
   }, [loading, user]);
 
   async function handleLogin(credentials: { email: string; password: string }): Promise<void> {
     setLoginError('');
     try { const result = await api.login(credentials); setUser(result.user); await loadWorkspace(); navigate('/dashboard'); }
     catch (error) { setLoginError(errorMessage(error)); throw error; }
+  }
+  async function handleRegister(input: RegistrationInput): Promise<void> {
+    const result = await api.register(input);
+    setUser(result.user);
+    await loadWorkspace();
+    navigate('/dashboard');
   }
   async function handleLogout() {
     try { await api.logout(); } finally { setUser(null); setTasks([]); setProjects([]); setSummary(null); setNotice(null); setAccountAnchor(null); navigate('/login'); }
@@ -105,7 +112,12 @@ export default function App() {
   }
 
   if (loading) return <ThemeProvider theme={theme}><CssBaseline /><Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: 'background.default' }}><Stack alignItems="center" spacing={2}><CircularProgress /><Typography color="text.secondary">Loading your workspace…</Typography></Stack></Box></ThemeProvider>;
-  if (!user) return <ThemeProvider theme={theme}><CssBaseline /><LoginPage onLogin={handleLogin} error={loginError} /></ThemeProvider>;
+  if (!user) {
+    const authPage = pageFor(route).page;
+    return <ThemeProvider theme={theme}><CssBaseline />{authPage === '/register'
+      ? <RegisterPage onRegister={handleRegister} onLoginClick={() => navigate('/login')} />
+      : <LoginPage onLogin={handleLogin} onRegisterClick={() => navigate('/register')} error={loginError} />}</ThemeProvider>;
+  }
 
   const { page, url } = pageFor(route);
   const pageTitle = [...sections, settingsLink].find((entry) => entry.path === page)?.label || 'Overview';

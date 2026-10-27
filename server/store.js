@@ -28,6 +28,7 @@ function seedState() {
     tasks,
     projects,
     preferences: { displayName: 'Demo User', timezone: 'Europe/Prague', weekStartsMonday: true },
+    users: [],
   };
 }
 
@@ -37,6 +38,7 @@ let saveQueue = Promise.resolve();
 async function load() {
   try {
     state = JSON.parse(await readFile(stateFile, 'utf8'));
+    if (!Array.isArray(state.users)) state.users = [];
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
     state = seedState();
@@ -60,99 +62,143 @@ async function update(mutator) {
   return result;
 }
 
-export async function listTasks(filters = {}) {
+function workspaceFor(db, userId) {
+  if (userId === 'demo-user') return db;
+  const user = db.users.find((item) => item.id === userId);
+  if (!user) throw new Error('Workspace account not found.');
+  return user.workspace;
+}
+
+function updateWorkspace(userId, mutator) {
+  return update((db) => mutator(workspaceFor(db, userId), db));
+}
+
+export async function getUserByEmail(email) {
   await ready;
-  return state.tasks
+  return state.users.find((user) => user.email === email) || null;
+}
+
+export async function getUserById(id) {
+  await ready;
+  return state.users.find((user) => user.id === id) || null;
+}
+
+export async function createUser(values) {
+  return update((db) => {
+    if (db.users.some((user) => user.email === values.email)) return null;
+    const user = {
+      id: randomUUID(),
+      email: values.email,
+      name: values.name,
+      passwordHash: values.passwordHash,
+      passwordSalt: values.passwordSalt,
+      workspace: {
+        tasks: [],
+        projects: [],
+        preferences: { displayName: values.name, timezone: 'Europe/Prague', weekStartsMonday: true },
+      },
+      createdAt: new Date().toISOString(),
+    };
+    db.users.push(user);
+    return user;
+  });
+}
+
+export async function listTasks(userId = 'demo-user', filters = {}) {
+  await ready;
+  return workspaceFor(state, userId).tasks
     .filter((task) => !filters.status || filters.status === 'all' || task.status === filters.status)
     .filter((task) => !filters.projectId || task.projectId === filters.projectId)
     .filter((task) => !filters.q || `${task.title} ${task.description}`.toLowerCase().includes(filters.q.toLowerCase()))
     .sort((a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999'));
 }
 
-export async function getTask(id) {
+export async function getTask(userId, id) {
   await ready;
-  return state.tasks.find((task) => task.id === id) || null;
+  return workspaceFor(state, userId).tasks.find((task) => task.id === id) || null;
 }
 
-export async function createTask(values) {
-  return update((db) => {
+export async function createTask(userId, values) {
+  return updateWorkspace(userId, (workspace) => {
     const task = { id: randomUUID(), ...values, createdAt: new Date().toISOString() };
-    db.tasks.unshift(task);
+    workspace.tasks.unshift(task);
     return task;
   });
 }
 
-export async function updateTask(id, values) {
-  return update((db) => {
-    const task = db.tasks.find((item) => item.id === id);
+export async function updateTask(userId, id, values) {
+  return updateWorkspace(userId, (workspace) => {
+    const task = workspace.tasks.find((item) => item.id === id);
     if (!task) return null;
     Object.assign(task, values, { updatedAt: new Date().toISOString() });
     return task;
   });
 }
 
-export async function removeTask(id) {
-  return update((db) => {
-    const index = db.tasks.findIndex((task) => task.id === id);
+export async function removeTask(userId, id) {
+  return updateWorkspace(userId, (workspace) => {
+    const index = workspace.tasks.findIndex((task) => task.id === id);
     if (index < 0) return false;
-    db.tasks.splice(index, 1);
+    workspace.tasks.splice(index, 1);
     return true;
   });
 }
 
-export async function listProjects() {
+export async function listProjects(userId = 'demo-user') {
   await ready;
-  return state.projects.map((project) => ({
+  const workspace = workspaceFor(state, userId);
+  return workspace.projects.map((project) => ({
     ...project,
-    taskCount: state.tasks.filter((task) => task.projectId === project.id).length,
+    taskCount: workspace.tasks.filter((task) => task.projectId === project.id).length,
   }));
 }
 
-export async function createProject(values) {
-  return update((db) => {
+export async function createProject(userId, values) {
+  return updateWorkspace(userId, (workspace) => {
     const project = { id: randomUUID(), ...values, createdAt: new Date().toISOString() };
-    db.projects.unshift(project);
+    workspace.projects.unshift(project);
     return project;
   });
 }
 
-export async function updateProject(id, values) {
-  return update((db) => {
-    const project = db.projects.find((item) => item.id === id);
+export async function updateProject(userId, id, values) {
+  return updateWorkspace(userId, (workspace) => {
+    const project = workspace.projects.find((item) => item.id === id);
     if (!project) return null;
     Object.assign(project, values, { updatedAt: new Date().toISOString() });
     return project;
   });
 }
 
-export async function removeProject(id) {
-  return update((db) => {
-    const index = db.projects.findIndex((project) => project.id === id);
+export async function removeProject(userId, id) {
+  return updateWorkspace(userId, (workspace) => {
+    const index = workspace.projects.findIndex((project) => project.id === id);
     if (index < 0) return false;
-    db.projects.splice(index, 1);
-    db.tasks.forEach((task) => {
+    workspace.projects.splice(index, 1);
+    workspace.tasks.forEach((task) => {
       if (task.projectId === id) task.projectId = null;
     });
     return true;
   });
 }
 
-export async function getPreferences() {
+export async function getPreferences(userId = 'demo-user') {
   await ready;
-  return state.preferences;
+  return workspaceFor(state, userId).preferences;
 }
 
-export async function updatePreferences(values) {
-  return update((db) => {
-    Object.assign(db.preferences, values);
-    return db.preferences;
+export async function updatePreferences(userId, values) {
+  return updateWorkspace(userId, (workspace) => {
+    Object.assign(workspace.preferences, values);
+    return workspace.preferences;
   });
 }
 
-export async function dashboardSummary() {
+export async function dashboardSummary(userId = 'demo-user') {
   await ready;
   const today = new Date().toISOString().slice(0, 10);
-  const tasks = state.tasks;
+  const workspace = workspaceFor(state, userId);
+  const tasks = workspace.tasks;
   const open = tasks.filter((task) => task.status !== 'done');
   return {
     total: tasks.length,
@@ -161,6 +207,6 @@ export async function dashboardSummary() {
     overdue: open.filter((task) => task.dueDate && task.dueDate < today).length,
     dueSoon: open.filter((task) => task.dueDate && task.dueDate >= today).length,
     upcoming: open.slice().sort((a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999')).slice(0, 5),
-    projects: state.projects.length,
+    projects: workspace.projects.length,
   };
 }

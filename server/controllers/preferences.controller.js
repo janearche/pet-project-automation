@@ -1,10 +1,12 @@
 import { demoEmail } from '../config.js';
-import { getPreferences, updatePreferences } from '../store.js';
+import { getPreferences, getUserById, updatePreferences } from '../store.js';
 
 const timezones = new Set(['Europe/Prague', 'Europe/London', 'America/New_York', 'America/Los_Angeles', 'UTC']);
 
-export async function get(_req, res) {
-  res.json({ preferences: await getPreferences(), email: demoEmail });
+export async function get(req, res) {
+  const profile = req.user.id === 'demo-user' ? { email: demoEmail } : await getUserById(req.user.id);
+  if (!profile) return res.status(401).json({ message: 'Please sign in to continue.' });
+  res.json({ preferences: await getPreferences(req.user.id), email: profile.email });
 }
 
 export async function update(req, res) {
@@ -20,5 +22,5 @@ export async function update(req, res) {
     values.timezone = input.timezone;
   }
   if (Object.hasOwn(input, 'weekStartsMonday')) values.weekStartsMonday = Boolean(input.weekStartsMonday);
-  res.json({ preferences: await updatePreferences(values) });
+  res.json({ preferences: await updatePreferences(req.user.id, values) });
 }

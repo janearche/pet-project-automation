@@ -1,4 +1,4 @@
-import type { DashboardSummary, Preferences, Project, ProjectInput, Task, TaskInput, User } from './types';
+import type { DashboardSummary, Preferences, Project, ProjectInput, RegistrationInput, Task, TaskInput, User } from './types';
 
 interface SessionResponse { user: User }
 interface TaskListResponse { tasks: Task[] }
@@ -23,6 +23,7 @@ async function request<T>(path: string, options: { method?: string; body?: unkno
 export const api = {
   me: () => request<SessionResponse>('/auth/me'),
   login: (body: { email: string; password: string }) => request<SessionResponse>('/auth/login', { method: 'POST', body }),
+  register: (body: RegistrationInput) => request<SessionResponse>('/auth/register', { method: 'POST', body }),
   logout: () => request<null>('/auth/logout', { method: 'POST' }),
   dashboard: () => request<DashboardSummary>('/dashboard'),
   tasks: (params: { status?: string; projectId?: string; search?: string } = {}) => {

@@ -36,34 +36,34 @@ function cleanTask(input, partial = false) {
   return { values };
 }
 
-async function validProject(projectId) {
+async function validProject(userId, projectId) {
   if (!projectId) return true;
-  return (await listProjects()).some((project) => project.id === projectId);
+  return (await listProjects(userId)).some((project) => project.id === projectId);
 }
 
 export async function list(req, res) {
-  res.json({ tasks: await listTasks({ status: req.query.status, projectId: req.query.projectId, q: req.query.q }) });
+  res.json({ tasks: await listTasks(req.user.id, { status: req.query.status, projectId: req.query.projectId, q: req.query.q }) });
 }
 
 export async function create(req, res) {
   const parsed = cleanTask(req.body || {});
   if (parsed.error) return res.status(400).json({ message: parsed.error });
-  if (!await validProject(parsed.values.projectId)) return res.status(400).json({ message: 'That project no longer exists.' });
-  res.status(201).json({ task: await createTask(parsed.values) });
+  if (!await validProject(req.user.id, parsed.values.projectId)) return res.status(400).json({ message: 'That project no longer exists.' });
+  res.status(201).json({ task: await createTask(req.user.id, parsed.values) });
 }
 
 export async function update(req, res) {
-  const current = await getTask(req.params.id);
+  const current = await getTask(req.user.id, req.params.id);
   if (!current) return res.status(404).json({ message: 'Task not found.' });
   const parsed = cleanTask(req.body || {}, true);
   if (parsed.error) return res.status(400).json({ message: parsed.error });
-  if (Object.hasOwn(parsed.values, 'projectId') && !await validProject(parsed.values.projectId)) {
+  if (Object.hasOwn(parsed.values, 'projectId') && !await validProject(req.user.id, parsed.values.projectId)) {
     return res.status(400).json({ message: 'That project no longer exists.' });
   }
-  res.json({ task: await updateTask(current.id, parsed.values) });
+  res.json({ task: await updateTask(req.user.id, current.id, parsed.values) });
 }
 
 export async function remove(req, res) {
-  if (!await removeTask(req.params.id)) return res.status(404).json({ message: 'Task not found.' });
+  if (!await removeTask(req.user.id, req.params.id)) return res.status(404).json({ message: 'Task not found.' });
   res.status(204).end();
 }

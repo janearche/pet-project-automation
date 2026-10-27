@@ -18,7 +18,7 @@ Open the Vite URL printed in the terminal. The development script starts the Exp
 - Email: `demo@daymark.local`
 - Password: `daymark-demo-123`
 
-The demo account is prefilled on the login page. The workspace state is stored in `data/state.json` and persists between restarts.
+The demo account is prefilled on the login page. Select **Register** there to create a separate account with its own initially empty task and project workspace. Account records and workspace state are stored in `data/state.json` and persist between restarts; passwords are stored as scrypt hashes with per-account salts.
 
 ## App structure
 
