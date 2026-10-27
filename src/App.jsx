@@ -5,7 +5,7 @@ const steps = [
   'Add components and styles as your idea takes shape.',
   'Run npm run build when you are ready to ship.',
 ];
-
+    console.log(steps);
 export default function App() {
   const [checked, setChecked] = useState([]);
 
