@@ -13,6 +13,8 @@ npm run dev
 
 Open the Vite URL printed in the terminal. The development script starts the Express API and Vite together; Vite forwards `/api` requests to the BFF on `127.0.0.1:4318`.
 
+Use `npm run dev` for the full app. `npm run dev:web` starts only Vite and will not serve API endpoints such as registration by itself.
+
 ### Demo sign-in
 
 - Email: `demo@daymark.local`
