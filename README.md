@@ -46,6 +46,12 @@ The five Express controllers are authentication, tasks, projects, dashboard, and
 npm run typecheck  # TypeScript check for the React frontend
 npm run build      # Build the frontend into dist/
 NODE_ENV=production npm start  # Serve the production build and API
+npm run test:e2e   # Run Playwright end-to-end tests
+npm run test:e2e:ui # Open Playwright's interactive test UI
 ```
+
+### Playwright setup
+
+Install the Chromium browser once with `npx playwright install chromium`, then run `npm run test:e2e`. Playwright starts the full development stack (`npm run dev`), including Express and Vite, and uses `http://127.0.0.1:5173` as its base URL. Override `PLAYWRIGHT_BASE_URL` or `API_PORT` when using custom ports. Test files belong in `e2e/`.
 
 For deployment, set `DEMO_EMAIL`, `DEMO_PASSWORD`, `DEMO_PASSWORD_SALT`, and a long random `SESSION_SECRET`. The built-in demo login and local JSON store are intended for a starter project, not a multi-user production service.
